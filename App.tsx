@@ -1,79 +1,38 @@
 import React, {useState} from "react"
-import {Alert, StyleSheet, View} from 'react-native'
-import { Navbar } from "./src/components/Navbar"
-import {MainScreen} from "./src/screens/MainScreen"
-import {TodoScreen} from "./src/screens/TodoScreen"
+import * as Font from 'expo-font'
+import AppLoading from 'expo-app-loading'
 
-interface Todo {
-  id: string
-  title: string
+import MainLayout from './src/MainLayout'
+import TodoState from './src/context/todo/TodoState'
+import ScreenState from './src/context/screen/ScreenState'
+
+
+async function loadApp() {
+    await Font.loadAsync({
+        'roboto-regular': require('./assets/fonts/Roboto-Regular.ttf'),
+        'roboto-bold': require('./assets/fonts/Roboto-Bold.ttf'),
+    })
 }
 
 export default function App() {
-  const [todoId, setTodoId] = useState<string | null >(null)
-  const [todos, setTodos] = useState<Todo[]>([])
+  const [isReady, setIsReady] = useState(false)
 
-  const addTodo = (title: string) => {
-    setTodos(prev => [...prev, {
-      id: Date.now().toString(),
-      title
-    }])
-  }
 
-  const removeTodo = (id: string) => {
-    const todo = todos.find((todo: Todo) => todo.id === id)
-    if (todo) {
-      Alert.alert(
-          "Удалить элемент",
-          `Вы действительно собираетесь удалить элемент "${todo.title}"?`,
-          [
-            {
-              text: "Отмена",
-              style: "cancel",
-            },
-            {
-              text: 'Удалить',
-              style: 'destructive',
-              onPress: () => {
-                setTodoId(null)
-                setTodos(prev => prev.filter(todo => todo.id !== id))
-              }
-            },
-          ],
-          {
-            cancelable: false,
-          }
+  if (!isReady) {
+      return (
+          <AppLoading
+              startAsync={loadApp}
+              onError={err => console.log(err)}
+              onFinish={() => setIsReady(true)}
+          />
       )
-    }
-  }
-
-  let content = (
-      <MainScreen
-          todos={todos}
-          addTodo={addTodo}
-          removeTodo={removeTodo}
-          openTodo={setTodoId}
-      />
-  )
-
-  if (todoId) {
-    const selectedTodo = todos.find(todo => todo.id === todoId)
-    content = <TodoScreen onRemove={removeTodo} goBack={() => setTodoId(null)} todo={selectedTodo} />
   }
 
   return (
-    <View>
-      <Navbar title="Todo App!"/>
-      <View style={styles.container}>
-        {content}
-      </View>
-    </View>
+    <ScreenState>
+      <TodoState>
+        <MainLayout />
+      </TodoState>
+    </ScreenState>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 20,
-    paddingVertical: 10
-  },
-})
