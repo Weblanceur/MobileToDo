@@ -14,6 +14,7 @@ import {
 } from '../types'
 import { ScreenContext } from '../screen/screenContext'
 import { Alert } from 'react-native'
+import { Http } from '../../http'
 
 const TodoState = ({ children }: any) => {
   const initialState = {
@@ -26,18 +27,32 @@ const TodoState = ({ children }: any) => {
   const [state, dispatch] = useReducer(todoReducer, initialState)
 
   const addTodo = async (title: string) => {
-    const response = await fetch('https://todo-12209-default-rtdb.europe-west1.firebasedatabase.app/todos.json', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ title })
-    })
-
-    const data = await response.json()
-    console.log(data)
-    dispatch({ type: ADD_TODO, title, id: data.name })
+    clearError()
+    showLoader()
+    try {
+      const data = await Http.post('https://todo-12209-default-rtdb.europe-west1.firebasedatabase.app/todos.json', { title })
+      dispatch({ type: ADD_TODO, title, id: data.name })
+    } catch (e) {
+      console.log(e)
+      showError('Что-то пошло не так....')
+    } finally {
+      hideLoader()
+    }
   }
 
-  const updateTodo = (id: string, title: string) => dispatch({ type: UPDATE_TODO, id, title })
+  const updateTodo = async (id: string, title: string) => {
+    clearError()
+    showLoader()
+    try {
+      await Http.patch(`https://todo-12209-default-rtdb.europe-west1.firebasedatabase.app/todos/${id}.json`, { title })
+      dispatch({ type: UPDATE_TODO, id, title })
+    } catch (e) {
+      console.log(e)
+      showError('Что-то пошло не так....')
+    } finally {
+      hideLoader()
+    }
+  }
 
   const removeTodo = (id: string) => {
     const todo = state.todos.find((t: Todo) => t.id === id)
@@ -52,7 +67,8 @@ const TodoState = ({ children }: any) => {
         {
           text: 'Удалить',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await Http.delete(`https://todo-12209-default-rtdb.europe-west1.firebasedatabase.app/todos/${id}.json`)
             changeScreen(null)
             dispatch({ type: REMOVE_TODO, id })
           }
@@ -68,19 +84,16 @@ const TodoState = ({ children }: any) => {
     clearError()
     showLoader()
     try {
-      const response = await fetch('https://todo-12209-default-rtdb.europe-west1.firebasedatabase.app/todos.json', {
-        headers: {'Content-Type': 'application/json'}
-      })
-
-      const data = await response.json()
+      const data = await Http.get('https://todo-12209-default-rtdb.europe-west1.firebasedatabase.app/todos.json')
       const todos = Object.keys(data).map(key => ({ ...data[key], id: key }))
 
       dispatch({ type: FETCH_TODOS, todos })
     } catch (e) {
       console.log(e)
       showError('Что-то пошло не так....')
+    } finally {
+      hideLoader()
     }
-    hideLoader()
   }
 
   const showLoader = () => dispatch({ type: SHOW_LOADER })
